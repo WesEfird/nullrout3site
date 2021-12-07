@@ -1,0 +1,73 @@
+﻿.mud-layout {
+    height: 100%;
+}
+
+.html .body #app{
+    height: 100%;
+}
+
+.breakwords {
+    word-break: break-word;
+}
+
+.table-nomargin {
+    margin-bottom: 8px;
+}
+
+.collector-view {
+    position: relative;
+    height: 100%;
+}
+.collector-content {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+}
+.collector-header {
+    flex: 1 0 auto;
+    position: relative;
+    height: 120px;
+    max-height: 120px;
+    width: 100%;
+}
+
+.collector-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+.collector-cols
+{
+    display:flex;
+    flex-direction: row;
+    position: relative;
+    height: 100%;
+    font-size: 90%;
+}
+
+.collector-cards {
+    position: relative;
+    height: 100%;
+    max-height: 100%;
+}
+
+.card-list {
+    position: relative;
+    list-style-type: none;
+    padding-inline-start: 8px;
+    padding-inline-end: 8px;
+}
+
+.collector-data {
+    position: relative;
+    height: 100%;
+    max-height: 100%;
+}
+
+.row #data-row {
+    --bs-gutter-x: 0px;
+}

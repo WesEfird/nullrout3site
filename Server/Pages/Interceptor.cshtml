@@ -1,0 +1,38 @@
+﻿@page "/test"
+@model nullrout3site.Server.Pages.InterceptorModel
+
+
+@{
+
+
+    Dictionary<string, string> requestHeaders =
+        new Dictionary<string, string>();
+
+    foreach (var header in Request.Headers)
+    {
+        requestHeaders.Add(header.Key, header.Value);
+    }
+
+
+    Request.EnableBuffering();
+    Request.Body.Position = 0;
+
+
+    var method = Request.Method;
+    var rawRequestBody = await new StreamReader(Request.Body).ReadToEndAsync();
+
+
+}
+
+<body>
+    <div class="main">
+        <div class="content px4">
+            @foreach (var header in requestHeaders)
+            {
+                <p>Header: @header.Key</p>
+                <p>Value: @header.Value</p>
+            }
+        </div>
+    </div>
+</body>
+

@@ -1,0 +1,24 @@
+﻿using nullrout3site.Shared;
+
+namespace nullrout3site.Server.Services
+{
+    public interface IInterceptorService
+    {
+        public List<Interceptor> GetInterceptorRequests(string _uid);
+
+        public Interceptor GetInterceptorRequestById(string uid, int requestId);
+
+        public Interceptor GetInterceptorLastRequest(string uid);
+
+        public bool DeleteRequest(string uid, int requestId);
+
+        public bool DeleteCollector(string uid);
+
+        public string NewUid();
+
+        public bool UidExists(string _uid);
+
+        public Task<Interceptor> ProcessRequest(string _uid, HttpRequest _request);
+
+    }
+}

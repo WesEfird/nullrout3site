@@ -1,0 +1,265 @@
+﻿@page "/wi/{uid}"
+@using Microsoft.AspNetCore.SignalR.Client
+@using nullrout3site.Shared
+@inject HttpClient Http
+@inject NavigationManager NavManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject nullrout3site.Client.Services.ClipboardService clipboardService
+@inject IDialogService DialogService
+@implements IAsyncDisposable
+
+<PageTitle>Web request interceptor</PageTitle>
+
+<MudGrid Class="ma-0" Style="width: 100%; height: 100%">
+    <!-- Information at the top of the page-->
+    <MudItem xs="12" Class="pb-0" Style="height:120px">
+        <MudContainer Style="width:50%">
+        <MudPaper Style="height: 100%">
+            
+                <div style="text-align: center">
+                    <MudText Typo="Typo.h5">Web request collector</MudText>
+                    <p>
+                        Collect web request and display them below.<br/>
+                        Click to copy collector URL:
+                        <MudChip Color="Color.Primary" @onclick="() => CopyToClipboard(_collectorUrl)">@_collectorUrl</MudChip>
+                        or
+                        <MudChip Color="Color.Error" @onclick="() => DeleteCollector()">Delete this collector</MudChip>
+                        <MudPopover Class="mt-10" Open="@_popIsOpen" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter" Style="@($"background-color:{Colors.Shades.White};")">
+                            <MudText Typo="Typo.body1" Class="px-4 py-2" Color="Color.Dark">Populate the results by sending a request to the collector.</MudText>
+                        </MudPopover>
+                    </p>
+                </div>
+            
+        </MudPaper>
+        </MudContainer>
+    </MudItem>
+
+    <!-- Main Interceptor contents -->
+    <MudItem xs="12" Class="pb-0" Style="height:calc(100% - 120px)">
+        <MudGrid Style="height: 100%">
+
+            <!-- List of request -->
+            <MudItem xs="2" Class="pb-0 pr-1" Style="max-height: 100%">
+                <MudPaper Class="d-flex flex-column pa-2" Style="height: 100%">
+                    <MudElement HtmlTag="div" Class="d-flex flex-column pa-1" Style="overflow-y: auto; max-heigt: 100%">
+                        @if (requestsData != null && requestsData.Any())
+                        {
+                            @for (var i = requestsData.Count - 1; i >= 0; i--)
+                            {
+                                var j = i; // Capture index to be used in onclick delegate. Cannot access index directly this way because of how anonymous expressions work with for-loops in C#
+                                if (j == ActiveCard) // Set card as primary color if it is the currently selected card
+                                {
+                                    
+                                        <MudCard Class="mud-theme-primary mb-1" @onclick="() => SetActiveCard(j)">
+                                            <MudCardHeader Class="pb-1">
+                                                <CardHeaderContent>
+                                                    <MudText>@requestsData[j].Method #@requestsData[j].RequestId</MudText>
+                                                    <MudDivider FlexItem="false"></MudDivider>
+                                                </CardHeaderContent>
+                                                <CardHeaderActions>
+                                                    <MudIconButton Icon="@Icons.Filled.Delete" Size="Size.Small" Style="@($"color:{Colors.Grey.Lighten5};")" @onclick="() => DeleteRequest(requestsData[j].RequestId)"/>
+                                                </CardHeaderActions>
+                                            </MudCardHeader>
+
+                                            <MudCardContent Class="pt-1">
+                                                @requestsData[j].TimeStamp.ToString("MM/dd/yyyy h:mm:ss tt")
+                                            </MudCardContent>
+                                        </MudCard>
+                                    
+                                } else
+                                {
+                                    <MudCard Class="mb-1" Style="background-color: var(--mud-palette-dark-lighten); color: #fff;" @onclick="() => SetActiveCard(j)">
+                                        <MudCardHeader Class="pb-1">
+                                            <CardHeaderContent>
+                                                <MudText>@requestsData[j].Method #@requestsData[j].RequestId</MudText>
+                                                <MudDivider FlexItem="false"></MudDivider>
+                                            </CardHeaderContent>
+                                            <CardHeaderActions>
+                                                <MudIconButton Icon="@Icons.Filled.Delete" Size="Size.Small" Style="@($"color:{Colors.Grey.Lighten5};")" @onclick="() => DeleteRequest(requestsData[j].RequestId)"/>
+                                            </CardHeaderActions>
+                                        </MudCardHeader>
+
+                                        <MudCardContent Class="pt-1">
+                                            @requestsData[j].TimeStamp.ToString("MM/dd/yyyy h:mm:ss tt")
+                                        </MudCardContent>
+                                    </MudCard>
+
+                                }   
+                            }
+                        }
+                        </MudElement>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Left info column -->
+            <MudItem xs="4" Class="pb-0 px-1" Style="max-height: 100%">
+                <MudPaper Class="d-flex flex-column pa-2" Style="height: 100%">
+                    <MudElement HtmlTag="div" Class="d-flex flex-column pa-1" Style="overflow-y: auto; max-heigt: 100%">
+
+                        @if (requestsData != null && requestsData.Any() && requestsData[ActiveCard] != null)
+                        {
+                            <MudCard Class="mb-1" Style="background-color: var(--mud-palette-dark-lighten); color: #fff;">
+                                <MudCardHeader Class="pb-1">
+                                    <CardHeaderContent>
+                                        <MudText>Request details/options</MudText>
+                                        <MudDivider FlexItem="false"></MudDivider>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+
+                                <MudCardContent Class="pt-1">  
+                                    <MudSimpleTable Class="mb-2">
+                                        <tbody class="breakwords">
+                                            <tr>
+                                                <th class="px-3 py-2">Request ID</th>
+                                                <td class="px-3 py-2">@requestsData[ActiveCard].RequestId</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="px-3 py-2">Date/Time</th>
+                                                <td class="px-3 py-2">@requestsData[ActiveCard].TimeStamp</td>
+                                            </tr>
+                                            <tr>
+                                                <th class="px-3 py-2">Method</th>
+                                                <td class="px-3 py-2">@requestsData[ActiveCard].Method</td>
+                                            </tr>
+                                        </tbody>
+                                    </MudSimpleTable>
+                                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="() => DeleteRequest(requestsData[ActiveCard].RequestId)">Delete request</MudButton>
+                                </MudCardContent>
+                            </MudCard>
+                            @if(requestsData[ActiveCard].FormData is not null && requestsData[ActiveCard].FormData.Any()) 
+                            {
+                                <MudCard Class="mb-1" Style="background-color: var(--mud-palette-dark-lighten); color: #fff;">
+                                    <MudCardHeader Class="pb-1">
+                                        <CardHeaderContent>
+                                            <MudText>Form data</MudText>
+                                            <MudDivider FlexItem="false"></MudDivider>
+                                        </CardHeaderContent>
+                                    </MudCardHeader>
+
+                                    <MudCardContent Class="pt-1">  
+                                        <MudSimpleTable FixedHeader="true">
+                                            <thead>
+                                                <tr>
+                                                    <th class="px-3 py-2">Key</th>
+                                                    <th class="px-3 py-2">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="breakwords">
+                                                @foreach(var data in requestsData[ActiveCard].FormData) 
+                                                {
+                                                    <tr>
+                                                        <td class="px-3 py-2">@data.Key</td>
+                                                        <td class="px-3 py-2">@data.Value</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+
+                            @if(requestsData[ActiveCard].QueryParams is not null && requestsData[ActiveCard].QueryParams.Any()) 
+                            {
+                                <MudCard Class="mb-1" Style="background-color: var(--mud-palette-dark-lighten); color: #fff;">
+                                    <MudCardHeader Class="pb-1">
+                                        <CardHeaderContent>
+                                            <MudText>Query strings</MudText>
+                                            <MudDivider FlexItem="false"></MudDivider>
+                                        </CardHeaderContent>
+                                    </MudCardHeader>
+
+                                    <MudCardContent Class="pt-1">  
+                                        <MudSimpleTable FixedHeader="true">
+                                            <thead>
+                                                <tr>
+                                                    <th class="px-3 py-2">Key</th>
+                                                    <th class="px-3 py-2">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="breakwords">
+                                                @foreach(var data in requestsData[ActiveCard].QueryParams)
+                                                {
+                                                    <tr>
+                                                        <td class="px-3 py-2">@data.Key</td>
+                                                        <td class="px-3 py-2">@data.Value</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+
+                            
+
+                        }
+
+
+                    </MudElement>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right info column-->
+            <MudItem xs="6" Class="pb-0 pl-1" Style="max-height: 100%">
+                <MudPaper Class="d-flex flex-column pa-2" Style="height: 100%">
+                    <MudElement HtmlTag="div" Class="d-flex flex-column pa-1" Style="overflow-y: auto; max-heigt: 100%">
+
+                        @if (requestsData != null && requestsData.Any() && requestsData[ActiveCard] != null)
+                        {
+                            @if (requestsData[ActiveCard].Headers is not null && requestsData[ActiveCard].Headers.Any())
+                            {
+                                <MudCard Class="mb-1" Style="background-color: var(--mud-palette-dark-lighten); color: #fff;">
+                                    <MudCardHeader Class="pb-1">
+                                        <CardHeaderContent>
+                                            <MudText>Headers</MudText>
+                                            <MudDivider FlexItem="false"></MudDivider>
+                                        </CardHeaderContent>
+                                    </MudCardHeader>
+
+                                    <MudCardContent Class="pt-1">  
+                                        <MudSimpleTable FixedHeader="true">
+                                            <thead>
+                                                <tr>
+                                                    <th class="px-3 py-2">Key</th>
+                                                    <th class="px-3 py-2">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="breakwords">
+                                                @foreach (var data in requestsData[ActiveCard].Headers) 
+                                                {
+                                                    <tr>
+                                                        <td class="px-3 py-2">@data.Key</td>
+                                                        <td class="px-3 py-2">@data.Value</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </MudSimpleTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                            @if (requestsData[ActiveCard].Body != "")
+                            {
+                                <MudCard Class="mb-1" Style="background-color: var(--mud-palette-dark-lighten); color: #fff;">
+                                    <MudCardHeader Class="pb-1">
+                                        <CardHeaderContent>
+                                            <MudText>Body content</MudText>
+                                            <MudDivider FlexItem="false"></MudDivider>
+                                        </CardHeaderContent>
+                                    </MudCardHeader>
+
+                                    <MudCardContent Class="pt-1">
+                                        <MudPaper Class="pa-3">
+                                            @requestsData[ActiveCard].Body;
+                                        </MudPaper>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                        }
+                    </MudElement>
+                </MudPaper>
+            </MudItem>
+
+        </MudGrid>
+    </MudItem>
+
+</MudGrid>

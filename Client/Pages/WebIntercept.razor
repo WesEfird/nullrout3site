@@ -1,0 +1,54 @@
+﻿@page "/webintercept"
+@using nullrout3site.Shared
+@inject HttpClient Http
+@inject NavigationManager NavManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+<PageTitle>Web request interceptor</PageTitle>
+
+<MudContainer Class="mt-4 px-auto" Style="text-align: center">
+
+        <MudText Typo="Typo.h5" Align="Align.Center">
+            Web request collector
+        </MudText>
+
+        <p>Collect web request and display them below.</p>
+
+        <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary" @onclick="GetUid">Create collector URL</MudButton>
+        
+
+    @if (uid != null)
+    {
+        <p>Redirecting to domain.local/webintercept/@uid.....</p>
+    }
+
+</MudContainer>
+
+
+@code {
+    private string? uid;
+
+    /// <summary>
+    /// API call to create a new uid. Once a uid has been returned, it will be stored in session storage and the client will be redirected to the collector information page.
+    /// </summary>
+    /// <returns></returns>
+    protected async Task GetUid()
+    {
+        uid = await Http.GetStringAsync("/i/newuid");
+        await sessionStorage.SetItemAsync("intercept-uid", uid);
+        NavManager.NavigateTo("/wi/" + uid);
+    }
+
+    /// <summary>
+    /// If the user has a uid already in session storage, then this will redirect them to the collector information page.
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        uid = await sessionStorage.GetItemAsync<string?>("intercept-uid");
+        if (uid != null)
+        {
+            NavManager.NavigateTo("/wi/" + uid);
+        }
+    }
+}
