@@ -73,7 +73,7 @@ namespace nullrout3site.Client.Pages
             {
                 if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    await sessionStorage.RemoveItemAsync("intercept-uid"); // Collector no longer exist, remove the uid from session storage
+                    await browserStorage.RemoveSessionUid(); // Collector no longer exist, remove the uid from session storage
                 }
             }
             StateHasChanged();
@@ -100,7 +100,7 @@ namespace nullrout3site.Client.Pages
             {
                 if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    await sessionStorage.RemoveItemAsync("intercept-uid"); // Collector no longer exist (probably), remove the uid from session storage
+                    await browserStorage.RemoveSessionUid(); // Collector no longer exist (probably), remove the uid from session storage
                 }
             }
             StateHasChanged();
@@ -261,12 +261,14 @@ namespace nullrout3site.Client.Pages
 
             var result = await dialog.Result; // Get the result of the dialog box (Whether they confirmed or canceled the action)
 
-            if (!result.Cancelled)
+            if (!result.Cancelled) // If the dialog box was not canceled. (By the 'X' or the 'Cancel' buttons.)
             {
-                var _response = await Http.DeleteAsync("/i/delcol/" + Uid); // Make the API call. Sends HTTP DELETE request.
+                var _token = Uid is not null ? await browserStorage.GetTokenFromUidAsync(Uid) : string.Empty; // Have to do this stupid thing so the compiler will accept that Uid will never be null. Ternary op that sets the token to an empty string if Uid is null. (which it never will be)
+
+                var _response = await Http.PostAsJsonAsync<string>("/i/delcol/" + Uid, _token); // Make the API call. Sends HTTP POST request.
                 if (_response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    await sessionStorage.RemoveItemAsync("intercept-uid"); // Remove uid from session storage so they will be greeted by the 'create collector' page instead of being redirected back here.
+                    await browserStorage.RemoveSessionUid(); // Remove uid from session storage so they will be greeted by the 'create collector' page instead of being redirected back here.
                     lock (requestsData)
                         requestsData.Clear();
                     NavManager.NavigateTo("/webintercept");
@@ -274,7 +276,7 @@ namespace nullrout3site.Client.Pages
                 else
                 {
                     parameters = new DialogParameters(); // Dialog popup if the API returns anything but a 200 OK
-                    parameters.Add("ContentText", "Error: " + _response.StatusCode.ToString());
+                    parameters.Add("ContentText", "Error: " + await _response.Content.ReadAsStringAsync());
                     parameters.Add("ButtonText", "Ok");
                     parameters.Add("Color", Color.Primary);
                     DialogService.Show<DialogTemplate>("Error :(", parameters, options);
@@ -295,7 +297,7 @@ namespace nullrout3site.Client.Pages
             {
                 requestsData.Clear();
             }
-            await sessionStorage.RemoveItemAsync("intercept-uid");
+            await browserStorage.RemoveSessionUid();
             StateHasChanged();
         }
     }

@@ -17,6 +17,8 @@ namespace nullrout3site.Server.Services
         /// </summary>
         public Dictionary<string, List<Interceptor>> InterceptContainer = new();
 
+        private Dictionary<string, string> UidTokens = new Dictionary<string, string>();
+
         public InterceptorService()
         {
             _cleanupTimer = new Timer(CleanupElapsed, null, 0, 1000 * 60 * 60 * _cleanupInterval);
@@ -95,16 +97,27 @@ namespace nullrout3site.Server.Services
         }
 
         /// <summary>
-        /// Deletes the list of Interceptors based on the key provided.
+        /// Deletes the list of Interceptors based on the key provided. Takes a token to validate the request. The token was provided to the client when the collector was first created.
         /// </summary>
         /// <param name="uid">Key used to find the appropriate list of Interceptor objects.</param>
+        /// <param name="token">Token that validates the request. The token was provided to the client that initially requested the collector be created.</param>
         /// <returns>true or false depending on the sucess of the deletion.</returns>
-        public bool DeleteCollector(string uid)
+        public bool DeleteCollector(string uid, string token)
         {
             lock (InterceptContainer)
             {
-                return InterceptContainer.Remove(uid);      
+                if (UidTokens[uid].Equals(token))
+                {
+                    if (InterceptContainer.Remove(uid))
+                    {
+                        lock (UidTokens)
+                            UidTokens.Remove(uid);
+                        return true;
+                    }
+                }
             }
+
+            return false;
         }
 
 
@@ -146,7 +159,7 @@ namespace nullrout3site.Server.Services
                     _interceptor.RequestId = 1;
 
                 InterceptContainer[_uid].Add(_interceptor);
-            }  
+            }
 
             return _interceptor;
         }
@@ -156,9 +169,11 @@ namespace nullrout3site.Server.Services
         /// Continuously generates a new uid until a unique one has been generated, and will add this value as a key to the InterceptContainer dictionary.
         /// </summary>
         /// <returns>String containing the final Unique ID. String is in the form of last 8 characters of an MD5 hash. E.g. (6842F7ED)</returns>
-        public string NewUid()
+        public Dictionary<string, string> NewUid()
         {
             string _uid = GenerateUid();
+            //Create unique token that will allow the user to delete the collector uid
+            string _token = Convert.ToBase64String(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString()));
 
             while (UidExists(_uid))
             {
@@ -167,8 +182,15 @@ namespace nullrout3site.Server.Services
 
             lock (InterceptContainer)
                 InterceptContainer.Add(_uid, new List<Interceptor>());
-            
-            return _uid;
+
+            lock (UidTokens)
+                UidTokens.Add(_uid, _token);
+
+            var _result = new Dictionary<string, string>() { 
+                { "uid" , _uid},
+                { "token", _token }
+            };
+            return (_result);
         }
 
         /// <summary>
@@ -183,6 +205,24 @@ namespace nullrout3site.Server.Services
         }
 
         /// <summary>
+        /// Takes an array of uids and drops the ones that do not exist, returning an array of only existing uids.
+        /// Length validation should be done if this method is invoked by a client in any way. (via an API-call, for example)
+        /// Otherwise, a client could supply a huge array to find all valid uids; this would be a negative impact to performance and security.
+        /// </summary>
+        /// <returns>Array of uids that exist compared to the array of uids supplied as an argument.</returns>
+        public List<string> UidsExist(List<string> inputUids)
+        {
+            List<string> _validUids = new List<string>();
+            foreach (var inUid in inputUids)
+            {
+                if (UidExists(inUid))
+                    _validUids.Add(inUid);
+            }
+
+            return _validUids;
+        }
+
+        /// <summary>
         /// Generates a new uid. Uses MD5 hash value based on a random int between Int32 min and max values.
         /// Strips all but the last 8 characters.
         /// </summary>
@@ -193,6 +233,7 @@ namespace nullrout3site.Server.Services
             string _iv = _random.Next(Int32.MinValue, Int32.MaxValue).ToString();
             string _uid = CreateMD5Hash(_iv);
             _uid = _uid.Substring(_uid.Length - 8);
+
 
             return _uid;
         }
@@ -216,6 +257,8 @@ namespace nullrout3site.Server.Services
 
             return sb.ToString();
         }
+
+
 
         /// <summary>
         /// Automated InterceptContainer cleanup proccess, cleans up old entries from memory. Invoked by an elapsed timer. Removes the UID and associated Interceptor objects if the timestamp of the last Interceptor object exceedes 24h.

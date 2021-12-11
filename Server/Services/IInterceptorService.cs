@@ -12,11 +12,13 @@ namespace nullrout3site.Server.Services
 
         public bool DeleteRequest(string uid, int requestId);
 
-        public bool DeleteCollector(string uid);
+        public bool DeleteCollector(string uid, string token);
 
-        public string NewUid();
+        public Dictionary<string, string> NewUid();
 
         public bool UidExists(string _uid);
+
+        public List<string> UidsExist(List<string> inputUids);
 
         public Task<Interceptor> ProcessRequest(string _uid, HttpRequest _request);
 

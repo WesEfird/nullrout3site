@@ -163,27 +163,26 @@ namespace nullrout3site.Server.Controllers
 
         }
 
-        //TODO: Implement some type of session/authorization mechanic to prevent any client from arbitrarily deleting collectors.
-
         /// <summary>
-        /// API endpoint (DELETE) that will delete the specified collector URL and all of it's corresponding request data.
+        /// API endpoint (POST) that will delete the specified collector URL and all of it's corresponding request data.
         /// </summary>
-        /// <param name="uid">uid of the collector to be deleted. Used as a lookup key.</param>
-        /// <returns>HTTP response indicating success/failure.</returns>
-        [HttpDelete("delcol/{uid}")]
-        public async Task<ActionResult> DeleteCollector(string uid)
+        /// <param name="uid">uid of the collector that will be requested to delete.</param>
+        /// <param name="token">token that corresponds to the collector, must be valid for the deletion request to be approved.</param>
+        /// <returns>HTTP response indicating whether the action was successful or not.</returns>
+        [HttpPost("delcol/{uid}")]
+        public async Task<ActionResult> DeleteCollector(string uid, [FromBody]string token)
         {
             if (_interceptorService.UidExists(uid))
             {
-                if (_interceptorService.DeleteCollector(uid))
+                if (_interceptorService.DeleteCollector(uid, token))
                 {
                     // Use websocket to alert clients of this collectors deletion. Only clients associated with this collector will be notified.
-                    await _hubContext.Clients.Group("intercept-" + uid).SendAsync("InterceptorNotifyCollectorDel"); 
+                    await _hubContext.Clients.Group("intercept-" + uid).SendAsync("InterceptorNotifyCollectorDel");
                     return Ok();
                 }
                 else
                 {
-                    return NotFound();
+                    return BadRequest("Either the collector does not exist, or an invalid token was supplied.");
                 }
             }
             else
@@ -201,12 +200,27 @@ namespace nullrout3site.Server.Controllers
         /// </summary>
         /// <returns>HTTP reponse indicating success.</returns>
         [HttpGet("newuid")]
-        public ActionResult<string> CreateUid()
+        public IActionResult CreateUid()
         {
             return Ok(_interceptorService.NewUid());
         }
 
-        
+
+        [HttpPost("checkuids")]
+        [RequestSizeLimit(1_000)]
+        public IActionResult CheckUids([FromBody]List<string> inUids)
+        {
+            if (inUids.Count <= 10)
+            {
+                var _validUids = _interceptorService.UidsExist(inUids);
+                return Ok(_validUids);
+            }
+            else
+            {
+                return BadRequest("Too many uids supplied.");
+            }
+        }
+
         /// <summary>
         /// Passes the request onto the InterceptorService's request processor which packages the request into an Interceptor object and adds it to the global collection of Interceptors.
         /// </summary>
