@@ -1,5 +1,7 @@
 # nullrout3Site
 Website that contains my developed webapps.<nl>
+Developed with ASP.NET core and Blazor WASM.
+
 [Live website](https://nullrout3.com)
 <nl>
 <h2>Web request collector</h2>
