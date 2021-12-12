@@ -3,6 +3,10 @@ using Blazored.SessionStorage;
 
 namespace nullrout3site.Client.Services
 {
+    /// <summary>
+    /// Service that handles interaction with the browser's local and session storage.
+    /// Manages adding and removing uids and tokens in the local storage.
+    /// </summary>
     public sealed class BrowserStorageService
     {
         private readonly ISessionStorageService _sessionStorage;

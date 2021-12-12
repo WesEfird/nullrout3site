@@ -7,6 +7,11 @@ using System.Net.Http.Json;
 
 namespace nullrout3site.Client.Pages
 {
+    /// <summary>
+    /// All of the client code that can potentially run on the /wi page, which is the main collector view that displays collector information, such as request data.
+    /// Mostly handles user actions, as well as establishing a SignalR connection which is used for the server to push notifications to the client.
+    /// i.e. when the collector has received a new request, a notification will be pushed so the client knows to update the information displayed.
+    /// </summary>
     public partial class WebInterceptId
     {
         // uid of the collector, grabbed from the URI of the page
@@ -73,34 +78,7 @@ namespace nullrout3site.Client.Pages
             {
                 if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    await browserStorage.RemoveSessionUid(); // Collector no longer exist, remove the uid from session storage
-                }
-            }
-            StateHasChanged();
-        }
-
-        /// <summary>
-        /// Asynchronous task to send GET request to the Interceptor API "/i/{uid}/out/last".
-        /// The API will return the last Interceptor object in the list of Interceptors that is mapped to the uid.
-        /// </summary>
-        /// <returns></returns>
-        protected async Task GetLastRequestData()
-        {
-            try
-            {
-                Interceptor? _lastInter = await Http.GetFromJsonAsync<Interceptor>("/i/" + Uid + "/out/last");
-                if (_lastInter is not null)
-                {
-                    lock (requestsData)
-                        requestsData?.Add(_lastInter);
-                }
-
-            }
-            catch (HttpRequestException e)
-            {
-                if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    await browserStorage.RemoveSessionUid(); // Collector no longer exist (probably), remove the uid from session storage
+                    // TODO: Possibly display error. May not be necessary.
                 }
             }
             StateHasChanged();
@@ -132,9 +110,30 @@ namespace nullrout3site.Client.Pages
         /// </summary>
         /// <param name="requestId"></param>
         /// <returns></returns>
-        protected async Task DeleteRequest(int? requestId)
+        protected async Task DeleteRequest(int requestId)
         {
-            await Http.PostAsJsonAsync("/i/" + Uid + "/del", requestId);
+            if (Uid is not null)
+            {
+                var _paramData = new Dictionary<string,string>()
+                {
+                    { "requestId", requestId.ToString() },
+                    { "token", await browserStorage.GetTokenFromUidAsync(Uid)}
+                };
+                var response = await Http.PostAsJsonAsync("/i/" + Uid + "/del", _paramData);
+
+                #region Dialog code
+                if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    var parameters = new DialogParameters();
+                    var options = new DialogOptions() { CloseButton = false, MaxWidth = MaxWidth.ExtraSmall };
+                    parameters.Add("ContentText", "You do not have authorization to delete request from this collector.");
+                    parameters.Add("ButtonText", "Ok");
+                    parameters.Add("Color", Color.Primary);
+
+                    DialogService.Show<DialogTemplate>("Error", parameters, options);
+                }
+                #endregion
+            }
         }
 
 
@@ -255,6 +254,7 @@ namespace nullrout3site.Client.Pages
             parameters.Add("ContentText", "This will permanently delete the collector URL and all associated request data. This process cannot be undone.");
             parameters.Add("ButtonText", "Delete");
             parameters.Add("Color", Color.Error);
+            parameters.Add("CancelButton", true);
             var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
 
             var dialog = DialogService.Show<DialogTemplate>("Delete collector?", parameters, options);
@@ -268,7 +268,6 @@ namespace nullrout3site.Client.Pages
                 var _response = await Http.PostAsJsonAsync<string>("/i/delcol/" + Uid, _token); // Make the API call. Sends HTTP POST request.
                 if (_response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    await browserStorage.RemoveSessionUid(); // Remove uid from session storage so they will be greeted by the 'create collector' page instead of being redirected back here.
                     lock (requestsData)
                         requestsData.Clear();
                     NavManager.NavigateTo("/webintercept");
@@ -297,7 +296,23 @@ namespace nullrout3site.Client.Pages
             {
                 requestsData.Clear();
             }
-            await browserStorage.RemoveSessionUid();
+
+            var parameters = new DialogParameters();
+            var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+            #region Dialog params
+            parameters.Add("ContentText", "It looks like someone else has deleted this collector.");
+            parameters.Add("ButtonText", "Ok");
+            parameters.Add("Color", Color.Primary);
+            #endregion
+
+            var dialog = DialogService.Show<DialogTemplate>("Collector deleted.", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Cancelled)
+            {
+                NavManager.NavigateTo("/webintercept");
+            }
+
             StateHasChanged();
         }
     }

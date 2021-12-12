@@ -2,12 +2,13 @@
 @using nullrout3site.Shared
 @inject HttpClient Http
 @inject NavigationManager NavManager
+@inject IDialogService DialogService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @inject nullrout3site.Client.Services.BrowserStorageService browserStorage
 
 <PageTitle>Web request interceptor</PageTitle>
 
-<MudContainer Class="mt-4 px-auto" Style="text-align: center">
+<MudContainer Class="mt-4 px-auto" Style="text-align: center; width: 30%">
 
         <MudText Typo="Typo.h5" Align="Align.Center">
             Web request collector
@@ -18,10 +19,32 @@
         <MudButton Class="mt-2" Variant="Variant.Filled" Color="Color.Primary" @onclick="GetUid">Create collector URL</MudButton>
         
 
-    @if (_uid != null)
-    {
-        <p>Redirecting to domain.local/webintercept/@_uid.....</p>
-    }
+        <MudText Typo="Typo.h5" Class="mt-4 mb-1">
+            My collectors
+        </MudText>
+
+        <MudSimpleTable Striped="true" Class="">
+            <thead>
+                <tr>
+                    <th>View</th>
+                    <th>Collector ID</th>
+                    <th>Token</th>
+                    <th>Delete</th>
+                    <th>Remove</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(var token in _tokenCache) {
+                    <tr>
+                        <td><MudIconButton Icon="@Icons.Filled.RemoveRedEye" Variant="Variant.Filled" Style="@($"background-color:{Colors.Indigo.Default}; color:{Colors.Shades.White}")" OnClick="() => NavigateToUid(token.Key)" /></td>
+                        <td>@token.Key</td>
+                        <td><MudIconButton Icon="@Icons.Filled.GeneratingTokens" Variant="Variant.Filled" Style="@($"background-color:{Colors.Indigo.Default}; color:{Colors.Yellow.Darken2}")" OnClick="() => ShowToken(token.Key)" /></td>
+                        <td><MudIconButton Icon="@Icons.Filled.Delete" Variant="Variant.Filled" Color="Color.Error" OnClick="() => DeleteCollector(token.Key, token.Value)" /></td>
+                        <td><MudIconButton Icon="@Icons.Filled.Close" Variant="Variant.Outlined" Color="Color.Error" OnClick="() => RemoveToken(token.Key)" /></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
 
 </MudContainer>
 

@@ -3,6 +3,10 @@ using System.Collections.Concurrent;
 
 namespace nullrout3site.Server.Hubs
 {
+    /// <summary>
+    /// The NotifyHub is the SignalR hub that deals with SingalR connections and pushing notifications to clients via SignalR. 
+    /// Be careful when adding functions to this class, as the full security implications are still unclear (To me, at least). A connected client could potentially push forged RPCs to the hub to execute any functions within this class.
+    /// </summary>
     public class NotifyHub : Hub
     {
         public static ConcurrentDictionary<string, NotifyClient> NotifyClients = new();
@@ -28,18 +32,6 @@ namespace nullrout3site.Server.Hubs
             NotifyClients.TryRemove(Context.ConnectionId, out _);
             Console.WriteLine("decon : " + Context.ConnectionId);
             return base.OnDisconnectedAsync(exception);
-        }
-
-        /// <summary>
-        /// Generic RPC availible to send a message to a specific client.
-        /// </summary>
-        /// <param name="conId">Connection ID of the client to receive the message.</param>
-        /// <param name="notifyType">String which contains the method to be called on the client.</param>
-        /// <param name="message">String that is passed as an argument to the method called on the client.</param>
-        /// <returns></returns>
-        public async Task NotifyClient(string conId, string notifyType, string message)
-        {
-            await Clients.Client(conId).SendAsync(notifyType, message);
         }
 
         /// <summary>

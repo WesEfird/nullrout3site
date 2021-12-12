@@ -7,7 +7,7 @@
     {
         public DateTime TimeStamp { get; set; }
 
-        public int? RequestId { get; set; }
+        public int RequestId { get; set; }
 
         public string? Method { get; set; }
 

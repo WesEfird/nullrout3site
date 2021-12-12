@@ -1,7 +1,12 @@
-﻿
+﻿@inject nullrout3site.Client.Services.ClipboardService clipboardService
+
 <MudDialog>
     <DialogContent>
+        <div style="text-align:center">
         <MudText>@ContentText</MudText>
+        <MudText>Click to copy to clipboard:</MudText>
+        <MudChip Color="Color.Primary" @onclick="() => CopyToClipboard(TokenString)">@TokenString</MudChip>
+        </div>
     </DialogContent>
     <DialogActions>
         @if (CancelButton)
@@ -19,6 +24,8 @@
 
     [Parameter] public string? ContentText { get; set; }
 
+    [Parameter] public string TokenString { get; set; } = string.Empty;
+
     [Parameter] public string? ButtonText { get; set; }
 
     [Parameter] public Color Color { get; set; }
@@ -27,5 +34,6 @@
 
     void Submit() => MudDialog.Close(DialogResult.Ok(true));
     void Cancel() => MudDialog.Cancel();
+    async Task CopyToClipboard(string tokenString) => await clipboardService.WriteTextAsync(tokenString);
 }
 

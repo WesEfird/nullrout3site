@@ -6,6 +6,10 @@ using nullrout3site.Server.Hubs;
 
 namespace nullrout3site.Server.Controllers
 {
+    /// <summary>
+    /// The API controller for collectors, most request will require the colelctor uid to be in the URL. 
+    /// This is basically the API endpoint that clients will interact with when requesting certain actions from the InterceptorService.
+    /// </summary>
     [Route("i")]
     [ApiController]
     public class InterceptorController : ControllerBase
@@ -92,24 +96,6 @@ namespace nullrout3site.Server.Controllers
         }
 
         /// <summary>
-        /// API endpoint that will return the last Interceptor object from the list that is found using the specified uid as a key. Returns object in JSON format.
-        /// </summary>
-        /// <param name="uid"></param>
-        /// <returns>Interceptor object. Serializes in JSON format.</returns>
-        [HttpGet("{uid}/out/last")]
-        public ActionResult<Interceptor> GetLastResult(string uid)
-        {
-            if (_interceptorService.UidExists(uid))
-            {
-                return Ok(_interceptorService.GetInterceptorLastRequest(uid));
-            }
-            else
-            {
-                return NotFound("Interceptor ID not found.");
-            }
-        }
-
-        /// <summary>
         /// API endpoint that will return the specified Interceptor object, based on it's requestId; uses the uid as a key to lookup the correct list of Interceptors. Returns object in JSON format.
         /// </summary>
         /// <param name="uid"></param>
@@ -133,8 +119,6 @@ namespace nullrout3site.Server.Controllers
             }
         }
 
-        //TODO: Implement some type of session/authorization mechanic to prevent any client from arbitrarily deleting requests.
-
         /// <summary>
         /// API endpoint (POST) that will delete a specified request from the list of Interceptor objects that are stored under the specified uid key.
         /// </summary>
@@ -142,11 +126,13 @@ namespace nullrout3site.Server.Controllers
         /// <param name="requestId">requestId extracted from POST request, used to determine which request to delete.</param>
         /// <returns>HTTP response indicating success/failure.</returns>
         [HttpPost("{uid}/del")]
-        public async Task<ActionResult> DeleteRequest(string uid, [FromBody] int requestId)
+        public async Task<ActionResult> DeleteRequest(string uid, [FromBody] Dictionary<string,string> paramData)
         {
+            var requestId = int.Parse(paramData["requestId"]);
+            var token = paramData["token"];
             if (_interceptorService.UidExists(uid))
             {
-                if (_interceptorService.DeleteRequest(uid, requestId))
+                if (_interceptorService.DeleteRequest(uid, requestId, token))
                 {
                     // Use websocket to alert clients of this request deletion. Only clients associated with this collector will be notified.
                     await _hubContext.Clients.Group("intercept-" + uid).SendAsync("InterceptorNotifyDel", requestId);
@@ -154,9 +140,10 @@ namespace nullrout3site.Server.Controllers
                 }
                 else
                 {
-                    return NotFound();
+                    return BadRequest("Either the collector or request does not exist, or an invalid token was supplied.");
                 }
-            } else
+            }
+            else
             {
                 return NotFound("Interceptor ID not found.");
             }

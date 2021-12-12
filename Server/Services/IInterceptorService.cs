@@ -8,9 +8,7 @@ namespace nullrout3site.Server.Services
 
         public Interceptor GetInterceptorRequestById(string uid, int requestId);
 
-        public Interceptor GetInterceptorLastRequest(string uid);
-
-        public bool DeleteRequest(string uid, int requestId);
+        public bool DeleteRequest(string uid, int requestId, string token);
 
         public bool DeleteCollector(string uid, string token);
 

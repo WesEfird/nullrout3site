@@ -4,6 +4,11 @@ using System.Text;
 
 namespace nullrout3site.Server.Services
 {
+    /// <summary>
+    /// Singleton service that manages the collectors; tracks the active collectors, and all of their related information, including request data, token, etc.
+    /// Provides all of the functionality of interacting with the collectors, like processing requests received by the collector, creating new collectors, or deleting existing collectors.
+    /// Also performs a cleanup cycle to remove old collectors that have not received a new request in some time. (Configurable with the _cleanupInterval and _collectorRetention variables.)
+    /// </summary>
     public class InterceptorService : IInterceptorService
     {
         private readonly Random _random = new();
@@ -60,21 +65,6 @@ namespace nullrout3site.Server.Services
         }
 
         /// <summary>
-        /// Exposed function that will return the last Interceptor object in the list that is stored under the uid key.
-        /// </summary>
-        /// <param name="uid">Key used to find the appropriate list of Interceptor objects.</param>
-        /// <returns>Last Interceptor object in the list.</returns>
-        public Interceptor GetInterceptorLastRequest(string uid)
-        {
-            Dictionary<string, List<Interceptor>> _cachedContainer;
-
-            lock (InterceptContainer)
-                _cachedContainer = new(InterceptContainer);
-
-            return _cachedContainer[uid].Last();
-        }
-
-        /// <summary>
         /// Deletes an Interceptor object based on it's requestId
         /// </summary>
         /// <param name="uid">Key used to find the appropriate list of Interceptor objects.</param>
@@ -90,6 +80,31 @@ namespace nullrout3site.Server.Services
                     {
                         InterceptContainer[uid].Remove(interceptor);
                         return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Deletes an Interceptor object based on it's requestId
+        /// </summary>
+        /// <param name="uid">Key used to find the appropriate list of Interceptor objects.</param>
+        /// <param name="requestId">The ID tied to the specific Interceptor object that will be removed.</param>
+        /// <returns>true or false depending on the success of the deletion.</returns>
+        public bool DeleteRequest(string uid, int requestId, string token)
+        {
+            lock (InterceptContainer)
+            {
+                if (UidTokens[uid].Equals(token))
+                {
+                    foreach (Interceptor interceptor in InterceptContainer[uid])
+                    {
+                        if (interceptor.RequestId == requestId)
+                        {
+                            InterceptContainer[uid].Remove(interceptor);
+                            return true;
+                        }
                     }
                 }
             }
@@ -287,7 +302,7 @@ namespace nullrout3site.Server.Services
 
                         if (elaspsedTime.TotalHours >= _collectorRetention)
                         {
-                            lock(InterceptContainer) // Lock the main dictionary only for the removal process.
+                            lock(InterceptContainer) // Lock the main dictionary only for the removal process. Even if the entry no longer exists in the InterceptContainer, no fatal errors should occur since we are removing by key.
                                 InterceptContainer.Remove(container.Key);
                         }
 
