@@ -45,6 +45,18 @@ namespace nullrout3site.Client.Services
             return await _localStorage.ContainKeyAsync("ColTokens");
         }
 
+        public async Task<bool> ContainsUidAsync(string uid)
+        {
+            if (await _localStorage.ContainKeyAsync("ColTokens"))
+            {
+                var _tokens = await _localStorage.GetItemAsync<Dictionary<string, string>>("ColTokens");
+
+                if (_tokens.ContainsKey(uid))
+                    return true;
+            }
+            return false;
+        }
+
         public async Task SetCollectorTokensAsync(Dictionary<string, string> collectorTokens)
         {
             await _localStorage.SetItemAsync<Dictionary<string, string>>("ColTokens", collectorTokens);

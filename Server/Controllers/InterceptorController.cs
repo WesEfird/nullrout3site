@@ -208,6 +208,17 @@ namespace nullrout3site.Server.Controllers
             }
         }
 
+        [HttpPost("checkuid")]
+        [RequestSizeLimit(1_000)]
+        public IActionResult CheckUid([FromBody]string inUid)
+        {
+            if (_interceptorService.UidExists(inUid))
+            {
+                return Ok();
+            }
+            return NotFound();
+        }
+
         /// <summary>
         /// Passes the request onto the InterceptorService's request processor which packages the request into an Interceptor object and adds it to the global collection of Interceptors.
         /// </summary>

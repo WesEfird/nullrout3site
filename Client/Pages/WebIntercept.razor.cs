@@ -176,6 +176,36 @@ namespace nullrout3site.Client.Pages
             }
         }
 
+        protected async Task ShowAddCollector()
+        {
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+            var dialog = DialogService.Show<DialogAddCollectorTemplate>("Add collector?", options);
+            var result = await dialog.Result;
+
+            if (!result.Cancelled)
+            {
+                (string, string) data = ((string, string)) result.Data; // weird cast. Input data from the dialog box comes back as a tuple of <string,string>
+
+                if (await browserStorage.ContainsUidAsync(data.Item1)) // Check if the collector uid already exist in the _tokenCache, indicating it's already on the watchlist.
+                {
+                    Snackbar.Add("Collector already exists in watchlist.", Severity.Error);
+                    return;
+                }
+
+                var _response = await Http.PostAsJsonAsync("/i/checkuid", data.Item1);
+
+                if (_response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    await AddToken(data.Item1, data.Item2);
+                }
+                else
+                {
+                    Snackbar.Add("Invalid UID", Severity.Error);
+                }
+            }
+        }
+
+
         /// <summary>
         /// Shows a dialog box which reaveals the token for the selected collector. This token is pulled from browser storage, and not from the server. 
         /// The only way for the client to have received this token is on the initial creation of the collector. Or if it was shared to them by another user.
@@ -195,6 +225,27 @@ namespace nullrout3site.Client.Pages
             #endregion
 
             var dialog = DialogService.Show<DialogTokenTemplate>("Token", parameters, options);
+        }
+
+        protected async Task ShowRemoveCollector(string uid)
+        {
+            #region Remove Collector Dialog
+            var parameters = new DialogParameters();
+            parameters.Add("ContentText", "This will remove the collector from your watchlist. It will NOT delete the collector, however, it will remove the token from your browser storage if one exists. Be sure you have the token saved somewhere else.");
+            parameters.Add("ButtonText", "Remove");
+            parameters.Add("Color", Color.Error);
+            parameters.Add("CancelButton", true);
+            var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+            var dialog = DialogService.Show<DialogTemplate>("Remove collector?", parameters, options);
+
+            var result = await dialog.Result; // Get the result of the dialog box (Whether they confirmed or canceled the action)
+            #endregion
+
+            if (!result.Cancelled)
+            {
+                await RemoveToken(uid);
+            }
         }
 
         private async Task DeleteCollector(string uid, string token)

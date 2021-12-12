@@ -1,0 +1,39 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudTextField @ref="uidField" @bind-Value="UidValue" Label="UID" Adornment="Adornment.Start" ReadOnly="false" Required="true" RequiredError="Required" />
+        <MudTextField @bind-Value="TokenValue" Label="Token" Adornment="Adornment.Start" ReadOnly="false" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    //Template used to create dynamic dialog popups. Parameters injected will be displayed to the user.
+
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string UidValue { get; set; } = string.Empty;
+    [Parameter]
+    public string TokenValue { get; set; } = string.Empty;
+
+    private MudTextField<string> uidField;
+
+
+    void Cancel() => MudDialog.Cancel();
+
+    void Submit()
+    {
+        if (UidValue.Any())
+        {
+            (string, string) data = (UidValue, TokenValue);
+            MudDialog.Close(DialogResult.Ok<(string, string)>(data));
+        } else
+        {
+            uidField.FocusAsync();
+        }
+    }
+}
+
