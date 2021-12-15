@@ -215,7 +215,7 @@ namespace nullrout3site.Client.Pages
         protected async Task ShowToken(string uid)
         {
             var parameters = new DialogParameters();
-            var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.Small };
+            var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.Medium };
             var token = await browserStorage.GetTokenFromUidAsync(uid);
             #region Dialog params
             parameters.Add("ContentText", "This token can be used to delete the collector, be careful when sharing it.");
@@ -235,7 +235,7 @@ namespace nullrout3site.Client.Pages
             parameters.Add("ButtonText", "Remove");
             parameters.Add("Color", Color.Error);
             parameters.Add("CancelButton", true);
-            var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+            var options = new DialogOptions() { CloseButton = true, MaxWidth = MaxWidth.Small };
 
             var dialog = DialogService.Show<DialogTemplate>("Remove collector?", parameters, options);
 

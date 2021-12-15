@@ -160,11 +160,13 @@ namespace nullrout3site.Server.Services
             try
             {
                 _interceptor.FormData = _request.Form.ToDictionary(k => k.Key, v => string.Join(";", v.Value));
-            } catch { }
+            }
+            catch { }
             try
             {
                 _interceptor.QueryParams = _request.Query.ToDictionary(k => k.Key, v => string.Join(";", v.Value));
-            } catch { }
+            }
+            catch { }
 
             lock (InterceptContainer)
             {
@@ -180,6 +182,20 @@ namespace nullrout3site.Server.Services
         }
 
         /// <summary>
+        /// Creates a 512-bit token using Cryptograhpic RNG.
+        /// </summary>
+        /// <returns>512-bit token encoded in Base64.</returns>
+        public string GenerateToken()
+        {
+            using (var cryptoProvider = RandomNumberGenerator.Create())
+            {
+                byte[] byteArray = new byte[64];
+                cryptoProvider.GetBytes(byteArray);
+                return Convert.ToBase64String(byteArray);
+            }
+        }
+
+        /// <summary>
         /// Creates a new uid value and ensures the value is unique and not already stored in memory.
         /// Continuously generates a new uid until a unique one has been generated, and will add this value as a key to the InterceptContainer dictionary.
         /// </summary>
@@ -188,7 +204,7 @@ namespace nullrout3site.Server.Services
         {
             string _uid = GenerateUid();
             //Create unique token that will allow the user to delete the collector uid
-            string _token = Convert.ToBase64String(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString()));
+            string _token = GenerateToken();
 
             while (UidExists(_uid))
             {
